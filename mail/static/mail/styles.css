@@ -28,3 +28,19 @@ textarea {
 #email-timestamp {
   color: #999;
 }
+
+#message-box {
+  display: none;
+  padding: 16px;
+  margin: 10px 0;
+  border-radius: 5px;
+  color: #666;
+}
+
+.success {
+  background-color: rgba(0, 255, 0, 0.3);
+}
+
+.error {
+  background-color: rgba(255, 0, 0, 0.3);
+}
