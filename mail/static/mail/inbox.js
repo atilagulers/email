@@ -20,25 +20,35 @@ document.addEventListener('DOMContentLoaded', function () {
   load_mailbox('inbox');
 });
 
+function hide_all_views() {
+  document.querySelector('#emails-view').style.display = 'none';
+  document.querySelector('#email-view').style.display = 'none';
+  document.querySelector('#compose-view').style.display = 'none';
+}
+
 async function send_email(e) {
   e.preventDefault();
+
+  const recipients = document.querySelector('#compose-recipients').value;
+  const subject = document.querySelector('#compose-subject').value;
+  const body = document.querySelector('#compose-body').value;
 
   const response = await fetch('/emails', {
     method: 'POST',
     body: JSON.stringify({
-      recipients: 'atila@example.com',
-      subject: 'This is very very important email !!!',
-      body: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Esse, sed, eum hic ut cupiditate error sapiente enim sint harum quia consequuntur. Non consectetur in eius nihil provident necessitatibus tenetur inventore. Lorem ipsum dolor sit amet consectetur adipisicing elit. Quod earum vel omnis, similique, sapiente tempora cum aspernatur incidunt tenetur officia iste porro aperiam velit doloremque inventore? Placeat sapiente aspernatur totam.',
+      recipients,
+      subject,
+      body,
     }),
   });
 
   const data = await response.json();
-  console.log(data);
+  load_mailbox('sent');
 }
 
 function compose_email() {
   // Show compose view and hide other views
-  document.querySelector('#emails-view').style.display = 'none';
+  hide_all_views();
   document.querySelector('#compose-view').style.display = 'block';
 
   // Clear out composition fields
@@ -49,8 +59,8 @@ function compose_email() {
 
 async function load_mailbox(mailbox) {
   // Show the mailbox and hide other views
+  hide_all_views();
   document.querySelector('#emails-view').style.display = 'block';
-  document.querySelector('#compose-view').style.display = 'none';
 
   // Show the mailbox name
   const emails_view = document.querySelector('#emails-view');
@@ -60,8 +70,7 @@ async function load_mailbox(mailbox) {
   }</h3>`;
 
   // fetch emails
-  const response = await fetch('/emails/inbox');
-  const data = await response.json();
+  const data = await fetch_emails(mailbox);
 
   data.forEach((email) => {
     const email_element = document.createElement('div');
@@ -72,6 +81,51 @@ async function load_mailbox(mailbox) {
     <p id='email-body'>${email.body}</p> 
     <p id='email-timestamp'>${email.timestamp}</p>
     `;
+
+    email_element.style.backgroundColor = email.read ? 'white' : 'lightgrey';
+    email_element.addEventListener('click', () => view_email(email.id));
     emails_view.appendChild(email_element);
   });
+
+  async function view_email(id) {
+    hide_all_views();
+    document.querySelector('#email-view').style.display = 'block';
+    const email_view = document.querySelector('#email-view');
+
+    const email_element = document.createElement('div');
+
+    const response = await fetch(`/emails/${id}`);
+    const email = await response.json();
+    await read_email(id);
+
+    email_element.innerHTML = `
+    <p id=''><strong>From:</strong> ${email.sender}</p>
+    <p id=''><strong>To:</strong> ${email.recipients}</p>
+    <p id=''><strong>Subject:</strong> ${email.subject}</p>
+    <p id=''><strong>Timestamp:</strong>${email.timestamp}</p>
+    <button id='archive'>Archive</button>
+    `;
+
+    email_element.innerHTML += `<button id='reply'>Reply</button>`;
+    email_element.innerHTML += `<p id='email-body'>${email.body}</p>`;
+    email_view.appendChild(email_element);
+  }
+
+  async function read_email(id) {
+    console.log(id);
+    const response = await fetch(`/emails/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        read: true,
+      }),
+    });
+
+    console.log(response);
+  }
+
+  async function fetch_emails(mailbox) {
+    const response = await fetch(`/emails/${mailbox}`);
+    const data = await response.json();
+    return data;
+  }
 }
